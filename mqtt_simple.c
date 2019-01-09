@@ -22,7 +22,7 @@
 int rc = 0;
 static struct mosquitto * mosq;
 
-//Default-Setting Override
+//Settings
 static char * host;
 static char * topic;
 static int port;
@@ -41,9 +41,10 @@ void print_manual() {
     pthread_mutex_lock(&print_mutex);
     fprintf(stdout, "-h: Host\tDefault: localhost\n"
                     "-p: Port\tDefault: 1883\n"
-                    "-m: This Manual"
-                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MQTT-MESSAGE RECEIVED]"
-                    "-t: Topic\tDefault: #\n");
+                    "-m: Manual\n"
+                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MESSAGE]. Erwartet Pfad aus Shell-Skript\n"
+                    "-t: Topic\tDefault: #\n"
+                    "-v: Verbose\n");
     pthread_mutex_unlock(&print_mutex);
 }
 
@@ -204,10 +205,10 @@ int main(int argc, char ** argv) {
     verbose = (verbose_flag == 1 ? 1 : 0);
 
 	//Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt
-	devnull_fd = open("/dev/null", O_WRONLY);
-	if (devnull_fd == -1) {
-	    perror("open() /dev/null");
-	    _exit(1);
+    devnull_fd = open("/dev/null", O_WRONLY);
+    if (devnull_fd == -1) {
+        perror("open() /dev/null");
+        _exit(1);
 	}
 
 	return_fd = dup2(devnull_fd, 2);
@@ -245,6 +246,7 @@ int main(int argc, char ** argv) {
 
         rc = mosquitto_loop_forever(mosq, -1, 1);
 	}
+	//Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
     mosquitto_destroy(mosq);
 	mosquitto_lib_cleanup();
 	exit(rc);
