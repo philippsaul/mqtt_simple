@@ -26,6 +26,8 @@ static struct mosquitto * mosq;
 static char * host;
 static char * topic;
 static int port;
+const char * script;
+static int verbose;
 
 //Filedescriptoren, werden fuer das Umlenken von stderr genommen, sind fuer atexit() statisch und nicht in Funktion
 static int  devnull_fd,
@@ -39,6 +41,8 @@ void print_manual() {
     pthread_mutex_lock(&print_mutex);
     fprintf(stdout, "-h: Host\tDefault: localhost\n"
                     "-p: Port\tDefault: 1883\n"
+                    "-m: This Manual"
+                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MQTT-MESSAGE RECEIVED]"
                     "-t: Topic\tDefault: #\n");
     pthread_mutex_unlock(&print_mutex);
 }
@@ -65,7 +69,10 @@ int voiceOutput (char * message) {
     pid_t child = fork();
     if (child >= 0) {
         if (child == 0) {
-            return execl("/bin/espeak", "espeak", "-v", "mb-de2", message, NULL);
+            if (script != NULL)
+                return execl("/bin/bash", "/bin/bash", script, message, NULL);
+            else
+                return execl("/bin/espeak", "espeak", "-v", "mb-de2", message, NULL);
         }
         else {
             wait (&status);
@@ -84,10 +91,10 @@ int voiceOutput (char * message) {
 void message_callback(struct mosquitto * mosq, void * obj, const struct mosquitto_message * message) {
 	bool match = 0;
     pthread_mutex_lock(&print_mutex);
-  	printf("got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload, message->topic);
+    if (verbose)
+  	    printf("got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload, message->topic);
     pthread_mutex_unlock(&print_mutex);
 
-	//mosquitto_topic_matches_sub("/devices/wb-adc/controls/+", message->topic, &match);
   	mosquitto_topic_matches_sub(topic , message->topic, &match);
   	if (match) {
         voiceOutput ((char *) message->payload);
@@ -117,16 +124,20 @@ int main(int argc, char ** argv) {
     signal(SIGTERM, handle_signal);
 
     //Argument-Parsing der Launch-Argumente
-    int host_flag = 0;
-    int port_flag = 0;
-    int topic_flag = 0;
+    int host_flag = 0,
+        man_flag = 0,
+        port_flag = 0,
+        script_flag = 0,
+        topic_flag = 0,
+        verbose_flag = 0;
     char * hostval = NULL;
     int portval;
+    char * scriptval = NULL;
     char * topicval = NULL;
     int c;
     opterr = 0;
 
-    while ((c = getopt(argc, argv, "h:p:t:")) != -1) {
+    while ((c = getopt(argc, argv, "h:mp:s:t:v")) != -1) {
         switch (c) {
             case 'h':
                 host_flag = 1;
@@ -140,9 +151,19 @@ int main(int argc, char ** argv) {
                     exit(1);
                 }
                 break;
+            case 'm':
+                man_flag = 1;
+                break;
+            case 's':
+                script_flag = 1;
+                scriptval = optarg;
+                break;
             case 't':
                 topic_flag = 1;
                 topicval = optarg;
+                break;
+            case 'v':
+                verbose_flag = 1;
                 break;
             case '?':
                 if (optopt == 'h' || optopt == 'p' || optopt == 't') {
@@ -167,24 +188,20 @@ int main(int argc, char ** argv) {
                 exit(1);
         }
     }
+    //Ende Argument-Parsing
+
+    //Manual und Quit
+    if (man_flag) {
+        print_manual();
+        exit(0);
+    }
 
     //Initialisierung der Parameter
     host = (host_flag == 1 ? hostval : DEFAULT_HOST);
     port = (port_flag == 1 ? portval : DEFAULT_PORT);
+    script = (script_flag == 1 ? scriptval : NULL);
     topic = (topic_flag == 1 ? topicval : DEFAULT_TOPIC);
-
-//    if (host_flag)
-//        host = hostval;
-//    else
-//        host = DEFAULT_HOST;
-//    if (port_flag)
-//        port = portval;
-//    else
-//        port = DEFAULT_PORT;
-//    if (topic_flag)
-//        topic = topicval;
-//    else
-//        topic = DEFAULT_TOPIC;
+    verbose = (verbose_flag == 1 ? 1 : 0);
 
 	//Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt
 	devnull_fd = open("/dev/null", O_WRONLY);
