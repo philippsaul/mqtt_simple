@@ -40,9 +40,9 @@ pthread_mutex_t voice_mutex;
 void print_manual() {
     pthread_mutex_lock(&print_mutex);
     fprintf(stdout, "-h: Host\tDefault: localhost\n"
-                    "-p: Port\tDefault: 1883\n"
                     "-m: Manual\n"
-                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MESSAGE]. Erwartet Pfad aus Shell-Skript\n"
+                    "-p: Port\tDefault: 1883\n"
+                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Shell-Skript\n"
                     "-t: Topic\tDefault: #\n"
                     "-v: Verbose\n");
     pthread_mutex_unlock(&print_mutex);
