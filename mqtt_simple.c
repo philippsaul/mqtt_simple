@@ -147,7 +147,7 @@ int main(int argc, char ** argv) {
             case 'p':
                 port_flag = 1;
                 portval = (int) strtol(optarg, NULL, 0); //Int-Cast, um die GCC-Warning zu beseitigen
-                if (portval == 0) {
+                if (portval == 0 || portval > 65535) {
                     print_manual();
                     exit(1);
                 }
