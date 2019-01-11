@@ -204,7 +204,7 @@ int main(int argc, char ** argv) {
     topic = (topic_flag == 1 ? topicval : DEFAULT_TOPIC);
     verbose = (verbose_flag == 1 ? 1 : 0);
 
-	//Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt
+    //Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt
     devnull_fd = open("/dev/null", O_WRONLY);
     if (devnull_fd == -1) {
         perror("open() /dev/null");
@@ -226,28 +226,28 @@ int main(int argc, char ** argv) {
     }
 
     //Hier geht Mosquitto los
-	mosquitto_lib_init();
-	mosq = mosquitto_new("RasPI-Session", true, 0);
+    mosquitto_lib_init();
+    mosq = mosquitto_new("RasPI-Session", true, 0);
 
-	if(mosq) {
-		mosquitto_connect_callback_set(mosq, connect_callback);
-		mosquitto_message_callback_set(mosq, message_callback);
-		mosquitto_disconnect_callback_set(mosq, disconnect_callback);
+    if(mosq) {
+        mosquitto_connect_callback_set(mosq, connect_callback);
+        mosquitto_message_callback_set(mosq, message_callback);
+        mosquitto_disconnect_callback_set(mosq, disconnect_callback);
 
-	    rc = mosquitto_connect(mosq, host, port, 60);
-	    if (rc != 0) {
-	        pthread_mutex_lock(&print_mutex);
-	        fprintf(stdout, "Fehlerhafte Konfigurationsdaten oder keine Verbindung!\n"
+        rc = mosquitto_connect(mosq, host, port, 60);
+        if (rc != 0) {
+            pthread_mutex_lock(&print_mutex);
+            fprintf(stdout, "Fehlerhafte Konfigurationsdaten oder keine Verbindung!\n"
                             "Shutting Down..\n");
-	        pthread_mutex_unlock(&print_mutex);
-	        exit(rc);
-	    }
-		mosquitto_subscribe(mosq, NULL, topic, 0);
+            pthread_mutex_unlock(&print_mutex);
+            exit(rc);
+        }
+        mosquitto_subscribe(mosq, NULL, topic, 0);
 
         rc = mosquitto_loop_forever(mosq, -1, 1);
-	}
-	//Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
+    }
+    //Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
     mosquitto_destroy(mosq);
-	mosquitto_lib_cleanup();
-	exit(rc);
+    mosquitto_lib_cleanup();
+    exit(rc);
 }
