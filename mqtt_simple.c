@@ -19,6 +19,8 @@ void exit_cleanup () {
     close(return_fd);
     pthread_mutex_destroy(&voice_mutex);
     pthread_mutex_destroy(&print_mutex);
+    mosquitto_destroy(mosq);
+    mosquitto_lib_cleanup();
 }
 
 /* Handled Interrupt-Signal, aktuell nur SIGINT und SIGTERM, siehe main() */
@@ -216,19 +218,24 @@ int main(int argc, char ** argv) {
         mosquitto_log_callback_set(mosq, log_callback);
 
         rc = mosquitto_connect(mosq, host, port, 60);
-        if (rc != 0) {
+        if (rc == MOSQ_ERR_INVAL) {
             pthread_mutex_lock(&print_mutex);
-            fprintf(stdout, "Fehlerhafte Konfigurationsdaten oder keine Verbindung!\n");
+            fprintf(stdout, "Fehlerhafte Konfigurationsdaten!\n");
             pthread_mutex_unlock(&print_mutex);
             exit(rc);
         }
+        else if (rc == MOSQ_ERR_ERRNO) {
+            pthread_mutex_lock(&print_mutex);
+            fprintf (stdout, "Error: %s\n", strerror(errno));
+            pthread_mutex_unlock(&print_mutex);
+            exit(rc);
+            }
 
         mosquitto_subscribe(mosq, NULL, topic, DEFAULT_QOS);
         rc = mosquitto_loop_forever(mosq, -1, 1);
     }
-    /* Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
-     * (Da das Programm sowieso terminiert wird, kann auch das Betriebssystem das Auf-
-     * raeumen uebernehmen)
+    /* Dieser Teil wird nur dann jemals ausgefuehrt falls mosq == 0. Ansonsten uebernimmt
+     * atexit() das Aufraeumen 
      */
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();

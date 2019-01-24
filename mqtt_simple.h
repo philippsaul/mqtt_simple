@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <sys/wait.h>
 #include <fcntl.h> /* Fuer File-Descriptor-Umbiegung (ALSA) */
+#include <time.h> /* Delay-Funktion */
 
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_PORT 1883
