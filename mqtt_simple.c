@@ -1,69 +1,42 @@
-#include <signal.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include "mqtt_simple.h"
 
-#include <unistd.h>
-#include <mosquitto.h>
-#include <pthread.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-
-#define DEFAULT_HOST "localhost"
-#define DEFAULT_PORT 1883
-#define DEFAULT_TOPIC "#"
-#define DEFAULT_QOS 2
-
-//rc ist der Return-Code (wird fuer Signal-Handle global deklariert), mosq das Mosquitto-Struct fuer die Session
-int rc = 0;
-static struct mosquitto * mosq;
-
-//Settings
-static char * host;
-static char * topic;
-static int port;
-const char * script;
-static int verbose;
-
-//Filedescriptoren, werden fuer das Umlenken von stderr genommen, sind fuer atexit() statisch und nicht in Funktion
-static int  devnull_fd,
-            return_fd;
-
-pthread_mutex_t print_mutex;
-pthread_mutex_t voice_mutex;
-
-//Manual
+/* Manual */
 void print_manual() {
     pthread_mutex_lock(&print_mutex);
-    fprintf(stdout, "-h: Host\tDefault: localhost\n"
+    fprintf(stdout, "Verfuegbare Launch-Optionen:\n"
+                    "-h: Host\tDefault: localhost\n"
                     "-m: Manual\n"
                     "-p: Port\tDefault: 1883\n"
-                    "-s: Script\tDefault: /bin/espeak espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Shell-Skript\n"
+                    "-s: Script\tDefault: espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Shell-Skript\n"
                     "-t: Topic\tDefault: #\n"
                     "-v: Verbose\n");
     pthread_mutex_unlock(&print_mutex);
 }
 
-//atexit()
+/* atexit()-Callback */
 void exit_cleanup () {
     close(devnull_fd);
     close(return_fd);
-//    pthread_mutex_destroy(&voice_mutex);
-//    pthread_mutex_destroy(&print_mutex);
+    pthread_mutex_destroy(&voice_mutex);
+    pthread_mutex_destroy(&print_mutex);
 }
 
-//Handled Interrupt-Signal (aktuell nur SIGINT und SIGTERM)
+/* Handled Interrupt-Signal, aktuell nur SIGINT und SIGTERM, siehe main() */
 void handle_signal(int s) {
     printf("Shutting Down..\n");
 	mosquitto_disconnect(mosq);
 	exit(rc);
 }
 
-//Selbsterklaerend: Sprachausgabe von message
+/* Sprachausgabe von message, entweder ueber Default (espeak) oder beim Start angegebenes.
+ * Ein minimalistisches Script fuer bash koennte beispielsweise so aussehen:
+ *
+ * #!/bin/bash
+ * pico2wave -w /tmp/message.wav -l "de-DE" "$@"
+ * aplay /tmp/message.wav
+ * rm /tmp/message.wav
+ * return 0
+ */
 int voiceOutput (char * message) {
     int status;
     pthread_mutex_lock(&voice_mutex);
@@ -88,12 +61,12 @@ int voiceOutput (char * message) {
     return 0;
 }
 
-//Die Callback-Funktionen
+/* Die Callback-Funktionen */
 void message_callback(struct mosquitto * mosq, void * obj, const struct mosquitto_message * message) {
 	bool match = 0;
     pthread_mutex_lock(&print_mutex);
     if (verbose)
-  	    printf("got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload, message->topic);
+  	    printf("Got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload, message->topic);
     pthread_mutex_unlock(&print_mutex);
 
   	mosquitto_topic_matches_sub(topic , message->topic, &match);
@@ -104,6 +77,7 @@ void message_callback(struct mosquitto * mosq, void * obj, const struct mosquitt
 
 void connect_callback(struct mosquitto * mosq, void * obj, int result) {
     pthread_mutex_lock(&print_mutex);
+    printf ("Start with -m flag to see the manual\n");
 	printf("Connected\n");
     pthread_mutex_unlock(&print_mutex);
 }
@@ -113,30 +87,36 @@ void disconnect_callback(struct mosquitto * mosq,  void * obj, int rc) {
     mosquitto_lib_cleanup();
 }
 
+/* Funktion wird gerade nicht verwendet, kann aber schnell erweitert werden */
+void log_callback(struct mosquitto * mosq, void * obj, int level, const char * str) {
+//TODO SET LOGFILES
+    ;
+}
 
 int main(int argc, char ** argv) {
-    //Fuer Mutex-Check
+    /* Fuer Mutex-Init-Ueberpruefung */
     int pm_check,
         vm_check;
 
-    //Initialisierung der Interrupt-Handle-Funktion/ exit()-Funktion
+    /* Initialisierung der Interrupt-Handle-Funktion/ exit()-Funktion */
     atexit(exit_cleanup);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
 
-    //Argument-Parsing der Launch-Argumente
+    /* Argument-Parsing der Launch-Argumente */
     int host_flag = 0,
         man_flag = 0,
         port_flag = 0,
         script_flag = 0,
         topic_flag = 0,
         verbose_flag = 0;
-    char * hostval = NULL;
     int portval;
+    char * hostval = NULL;
     char * scriptval = NULL;
     char * topicval = NULL;
     int c;
-    opterr = 0;
+    opterr = 0; /* Verhindert in getopt() einen Print auf stderr, falls option character 
+                   unbekannt */
 
     while ((c = getopt(argc, argv, "h:mp:s:t:v")) != -1) {
         switch (c) {
@@ -146,7 +126,8 @@ int main(int argc, char ** argv) {
                 break;
             case 'p':
                 port_flag = 1;
-                portval = (int) strtol(optarg, NULL, 0); //Int-Cast, um die GCC-Warning zu beseitigen
+                portval = (int) strtol(optarg, NULL, 0); /*Int-Cast, um die GCC-Warning zu
+                                                           beseitigen */
                 if (portval == 0 || portval > 65535) {
                     print_manual();
                     exit(1);
@@ -189,35 +170,22 @@ int main(int argc, char ** argv) {
                 exit(1);
         }
     }
-    //Ende Argument-Parsing
+    /* Ende Argument-Parsing */
 
-    //Manual und Quit
+    /* Manual und Quit */
     if (man_flag) {
         print_manual();
         exit(0);
     }
 
-    //Initialisierung der Parameter
+    /* Initialisierung der Settings */
     host = (host_flag == 1 ? hostval : DEFAULT_HOST);
     port = (port_flag == 1 ? portval : DEFAULT_PORT);
     script = (script_flag == 1 ? scriptval : NULL);
     topic = (topic_flag == 1 ? topicval : DEFAULT_TOPIC);
     verbose = (verbose_flag == 1 ? 1 : 0);
 
-    //Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt
-    devnull_fd = open("/dev/null", O_WRONLY);
-    if (devnull_fd == -1) {
-        perror("open() /dev/null");
-        _exit(1);
-	}
-
-	return_fd = dup2(devnull_fd, 2);
-    if (return_fd < 0) {
-        perror("dup2()");
-        _exit(1);
-    }
-
-    //Mutex-Init
+    /* Mutex-Init */
     pm_check = pthread_mutex_init(&print_mutex, NULL);
     vm_check = pthread_mutex_init(&voice_mutex, NULL);
     if ((pm_check || vm_check) != 0) {
@@ -225,7 +193,19 @@ int main(int argc, char ** argv) {
         _exit(1);
     }
 
-    //Hier geht Mosquitto los
+    /* Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt */
+    devnull_fd = open("/dev/null", O_WRONLY);
+    if (devnull_fd == -1) {
+        perror("open() /dev/null");
+        _exit(1);
+	}
+	return_fd = dup2(devnull_fd, 2);
+    if (return_fd < 0) {
+        perror("dup2()");
+        _exit(1);
+    }
+
+    /* Hier geht Mosquitto los */
     mosquitto_lib_init();
     mosq = mosquitto_new("RasPI-Session", true, 0);
 
@@ -233,20 +213,23 @@ int main(int argc, char ** argv) {
         mosquitto_connect_callback_set(mosq, connect_callback);
         mosquitto_message_callback_set(mosq, message_callback);
         mosquitto_disconnect_callback_set(mosq, disconnect_callback);
+        mosquitto_log_callback_set(mosq, log_callback);
 
         rc = mosquitto_connect(mosq, host, port, 60);
         if (rc != 0) {
             pthread_mutex_lock(&print_mutex);
-            fprintf(stdout, "Fehlerhafte Konfigurationsdaten oder keine Verbindung!\n"
-                            "Shutting Down..\n");
+            fprintf(stdout, "Fehlerhafte Konfigurationsdaten oder keine Verbindung!\n");
             pthread_mutex_unlock(&print_mutex);
             exit(rc);
         }
-        mosquitto_subscribe(mosq, NULL, topic, 0);
 
+        mosquitto_subscribe(mosq, NULL, topic, DEFAULT_QOS);
         rc = mosquitto_loop_forever(mosq, -1, 1);
     }
-    //Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
+    /* Dieser Teil wird nur dann jemals ausgefuehrt, falls mosq == 0. Ansonsten atexit()
+     * (Da das Programm sowieso terminiert wird, kann auch das Betriebssystem das Auf-
+     * raeumen uebernehmen)
+     */
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
     exit(rc);
