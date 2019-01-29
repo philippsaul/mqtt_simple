@@ -25,11 +25,12 @@
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_PORT 1883
 #define DEFAULT_TOPIC "#"
-#define DEFAULT_QOS 1
+#define DEFAULT_QOS 2
 
 static char * host;
 static char * topic;
 static int port;
+static int qos;
 const char * script;
 static int verbose;
 

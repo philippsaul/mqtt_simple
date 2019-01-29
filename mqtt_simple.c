@@ -5,11 +5,12 @@ void print_manual() {
     pthread_mutex_lock(&print_mutex);
     fprintf(stdout, "Verfuegbare Launch-Optionen:\n"
                     "-h: Host\tDefault: localhost\n"
-                    "-m: Manual\n"
+                    "-m: Manual\tPrint this Manual\n"
                     "-p: Port\tDefault: 1883\n"
+                    "-q: QoS\t\tDefault: 2\n"
                     "-s: Script\tDefault: espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Shell-Skript\n"
                     "-t: Topic\tDefault: #\n"
-                    "-v: Verbose\n");
+                    "-v: Verbose\tPrint Output to Stdout\n");
     pthread_mutex_unlock(&print_mutex);
 }
 
@@ -108,26 +109,29 @@ int main(int argc, char ** argv) {
     int host_flag = 0,
         man_flag = 0,
         port_flag = 0,
+        qos_flag = 0,
         script_flag = 0,
-        topic_flag = 0,
-        verbose_flag = 0;
+        topic_flag = 0;
     int c;
     opterr = 0; /* Verhindert in getopt() einen Print auf stderr, falls option character 
                    unbekannt */
 
-    while ((c = getopt(argc, argv, "h:mp:s:t:v")) != -1) {
+    while ((c = getopt(argc, argv, "h:mp:q:s:t:v")) != -1) {
         switch (c) {
             case 'h':
                 host_flag = 1;
                 host = optarg;
                 break;
+            case 'm':
+                man_flag = 1;
+                break;
             case 'p':
                 port_flag = 1;
                 port = (int) strtol(optarg, NULL, 0);
                 break;
-            case 'm':
-                man_flag = 1;
-                break;
+            case 'q':
+                qos_flag = 1;
+                qos = (int) strtol(optarg, NULL, 0);
             case 's':
                 script_flag = 1;
                 script = optarg;
@@ -137,7 +141,7 @@ int main(int argc, char ** argv) {
                 topic = optarg;
                 break;
             case 'v':
-                verbose_flag = 1;
+                verbose = 1;
                 break;
             case '?':
                 if (optopt == 'h' || optopt == 'p' || optopt == 's' || optopt == 't') {
@@ -162,7 +166,13 @@ int main(int argc, char ** argv) {
                 exit(1);
         }
     }
-    /* Ende Argument-Parsing und Init*/
+    /* Ende Argument-Parsing und Init */
+
+    host = (host_flag == 0) ? DEFAULT_HOST : host;
+    port = (port_flag == 0) ? DEFAULT_PORT : port;
+    qos = (qos_flag == 0) ? DEFAULT_QOS : qos;
+    topic = (topic_flag) == 0 ? DEFAULT_TOPIC : topic;
+    script = (script_flag) == 0 ? NULL : script;
 
     /* Manual und Quit */
     if (man_flag) {
@@ -218,7 +228,7 @@ int main(int argc, char ** argv) {
         rc = mosquitto_loop_forever(mosq, -1, 1);
     }
     /* Dieser Teil wird nur dann jemals ausgefuehrt falls mosq == NULL. Ansonsten uebernimmt
-     * atexit() das Aufraeumen da das Programm nur ueber Interrupt terminiert wird
+     * atexit() das Aufraeumen, da das Programm nur ueber Interrupt terminiert wird
      */
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
