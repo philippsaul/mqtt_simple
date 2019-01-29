@@ -10,7 +10,7 @@ void print_manual() {
                     "-q: QoS\t\tDefault: 2\n"
                     "-s: Script\tDefault: espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Bash-Skript\n"
                     "-t: Topic\tDefault: #\n"
-                    "-v: Verbose\tPrint Output to Stdout\n");
+                    "-v: Verbose\tPrint received messages to Stdout\n");
     pthread_mutex_unlock(&print_mutex);
 }
 
@@ -187,7 +187,7 @@ int main(int argc, char ** argv) {
         _exit(1);
     }
 
-    /* Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und stdout zumuellt */
+    /* Lenkt stderr in /dev/null um, da ALSA zu viel schwaetzt und Stdout zumuellt */
     devnull_fd = open("/dev/null", O_WRONLY);
     if (devnull_fd == -1) {
         perror("open() /dev/null");
