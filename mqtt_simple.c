@@ -8,7 +8,7 @@ void print_manual() {
                     "-m: Manual\tPrint this Manual\n"
                     "-p: Port\tDefault: 1883\n"
                     "-q: QoS\t\tDefault: 2\n"
-                    "-s: Script\tDefault: espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Shell-Skript\n"
+                    "-s: Script\tDefault: espeak -v mb-de2 [MESSAGE]. Erwartet Pfad zu Bash-Skript\n"
                     "-t: Topic\tDefault: #\n"
                     "-v: Verbose\tPrint Output to Stdout\n");
     pthread_mutex_unlock(&print_mutex);
@@ -38,7 +38,6 @@ void handle_signal(int s) {
  * pico2wave -w /tmp/message.wav -l "de-DE" "$@"
  * aplay /tmp/message.wav
  * rm /tmp/message.wav
- * return 0
  */
 int voiceOutput (char * message) {
     int status;
@@ -80,7 +79,7 @@ void message_callback(struct mosquitto * mosq, void * obj, const struct mosquitt
 
 void connect_callback(struct mosquitto * mosq, void * obj, int result) {
     pthread_mutex_lock(&print_mutex);
-    fprintf(stdout, "Start with -m flag to see the manual\n");
+  //fprintf(stdout, "Start with -m flag to see the manual\n");
 	fprintf(stdout, "Connected\n");
     pthread_mutex_unlock(&print_mutex);
 }
@@ -224,7 +223,7 @@ int main(int argc, char ** argv) {
             exit(rc);
             }
 
-        mosquitto_subscribe(mosq, NULL, topic, DEFAULT_QOS);
+        mosquitto_subscribe(mosq, NULL, topic, qos);
         rc = mosquitto_loop_forever(mosq, -1, 1);
     }
     /* Dieser Teil wird nur dann jemals ausgefuehrt falls mosq == NULL. Ansonsten uebernimmt
