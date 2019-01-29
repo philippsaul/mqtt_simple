@@ -40,8 +40,8 @@ static int devnull_fd,
            return_fd;
 
 /* Zwei Mutexe fuer Stdout und den Voice-Output. Im Moment nicht zwingend noetig, da das 
- * Programm in einem einzelnen Thread laueft (Der Voice-Output wird durch wait(&status) 
- * in VoiceOutput() bedingt garantiert nicht mehrmals gleichzeitig aufgerufen). Wird aber
+ * Programm in einem einzelnen Thread laueft (Der Voice-Output wird bedingt durch wait(&status) 
+ * in VoiceOutput() garantiert nicht mehrmals gleichzeitig aufgerufen). Wird aber
  * essentiell, falls jemals mehr als ein Thread aufgemacht werden sollte. 
  */
 pthread_mutex_t print_mutex;
