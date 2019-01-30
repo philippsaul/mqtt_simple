@@ -167,16 +167,9 @@ int main(int argc, char ** argv) {
     }
     /* Ende Argument-Parsing und Init */
 
-    host = (host_flag == 0) ? DEFAULT_HOST : host;
-    port = (port_flag == 0) ? DEFAULT_PORT : port;
-    qos = (qos_flag == 0) ? DEFAULT_QOS : qos;
-    topic = (topic_flag) == 0 ? DEFAULT_TOPIC : topic;
-    script = (script_flag) == 0 ? NULL : script;
-
     /* Manual und Quit */
     if (man_flag) {
         print_manual();
-        exit(0);
     }
 
     /* Mutex-Init */
@@ -231,5 +224,5 @@ int main(int argc, char ** argv) {
      */
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
-    return rc;
+    return 1;
 }

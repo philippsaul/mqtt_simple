@@ -27,12 +27,6 @@
 #define DEFAULT_TOPIC "#"
 #define DEFAULT_QOS 2
 
-static char * host;
-static char * topic;
-static int port;
-static int qos;
-const char * script;
-static int verbose;
 
 /* Filedescriptoren, werden fuer das Umlenken von stderr genommen, sind fuer atexit() sta-
  * tisch und nicht in Funktion 
@@ -55,12 +49,13 @@ pthread_mutex_t voice_mutex;
 int rc = 0;
 static struct mosquitto * mosq;
 
-/*** Settings, die spaeter in mosq eingetragen werden ***/
-static char * host;
-static char * topic;
-static int port;
-const char * script;
-static int verbose;
+/* Settings, die spaeter in mosq eingetragen werden */
+static char * host = DEFAULT_HOST;
+static char * topic = DEFAULT_TOPIC;
+static int port = DEFAULT_PORT;
+static int qos = DEFAULT_QOS;
+static char * script = NULL;
+static int verbose = 0;
 
 /* Verwendete Hilfsfunktionen */
 extern void print_manual();
