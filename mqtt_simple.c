@@ -167,7 +167,7 @@ int main(int argc, char ** argv) {
     }
     /* Ende Argument-Parsing und Init */
 
-    /* Manual und Quit */
+    /* Manual */
     if (man_flag) {
         print_manual();
     }
@@ -214,7 +214,7 @@ int main(int argc, char ** argv) {
             fprintf (stdout, "Error: %s\n", strerror(errno));
             pthread_mutex_unlock(&print_mutex);
             exit(rc);
-            }
+        }
 
         mosquitto_subscribe(mosq, NULL, topic, qos);
         rc = mosquitto_loop_forever(mosq, -1, 1);

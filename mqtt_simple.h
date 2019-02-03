@@ -45,9 +45,11 @@ pthread_mutex_t voice_mutex;
 /* rc:      Return-Code, gibt den Status der Verbindung zum Broker wieder (wird fuer 
  *          Signal-Handle global deklariert)
  * mosq:    das Mosquitto-Struct fuer die Session
+ * verbose: Bestimmt, ob empfangene Nachrichten auf Stdout ausgegeben werden
  */
 int rc = 0;
 static struct mosquitto * mosq;
+static int verbose = 0;
 
 /* Settings, die spaeter in mosq eingetragen werden */
 static char * host = DEFAULT_HOST;
@@ -55,7 +57,6 @@ static char * topic = DEFAULT_TOPIC;
 static int port = DEFAULT_PORT;
 static int qos = DEFAULT_QOS;
 static char * script = NULL;
-static int verbose = 0;
 
 /* Verwendete Hilfsfunktionen */
 extern void print_manual();
