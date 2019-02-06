@@ -42,12 +42,11 @@ static int devnull_fd,
 pthread_mutex_t print_mutex;
 pthread_mutex_t voice_mutex;
 
-/* rc:      Return-Code, gibt den Status der Verbindung zum Broker wieder (wird fuer 
- *          Signal-Handle global deklariert)
+/* rc:      Return-Code, gibt den Status der Verbindung zum Broker wieder
  * mosq:    das Mosquitto-Struct fuer die Session
  * verbose: Bestimmt, ob empfangene Nachrichten auf Stdout ausgegeben werden
  */
-int rc = 0;
+static int rc = 0;
 static struct mosquitto * mosq;
 static int verbose = 0;
 
