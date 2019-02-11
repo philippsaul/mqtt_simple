@@ -66,11 +66,12 @@ int voiceOutput (char * message) {
 /* Die Callback-Funktionen */
 void message_callback(struct mosquitto * mosq, void * obj, const struct mosquitto_message * message) {
 	bool match = 0;
-    pthread_mutex_lock(&print_mutex);
-    if (verbose)
-  	    fprintf(stdout, "Got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload, message->topic);
-    pthread_mutex_unlock(&print_mutex);
-
+    if (verbose) {
+        pthread_mutex_lock(&print_mutex);
+        fprintf(stdout, "Got message '%.*s' for topic '%s'\n", message->payloadlen, (char *) message->payload,
+                message->topic);
+        pthread_mutex_unlock(&print_mutex);
+    }
   	mosquitto_topic_matches_sub(topic , message->topic, &match);
   	if (match) {
         voiceOutput ((char *) message->payload);
@@ -131,6 +132,7 @@ int main(int argc, char ** argv) {
             case 'q':
                 qos_flag = 1;
                 qos = (int) strtol(optarg, NULL, 0);
+                break;
             case 's':
                 script_flag = 1;
                 script = optarg;
