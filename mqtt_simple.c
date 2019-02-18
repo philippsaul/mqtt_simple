@@ -193,6 +193,10 @@ int main(int argc, char ** argv) {
         perror("dup2()");
         _exit(1);
     }
+    /* Ab sofort ist return_fd der File-Deskriptor fuer Stderr, daher sollte devnull_fd
+     * wieder geschlossen werden
+     */
+    close(devnull_fd);
 
     /* Hier geht Mosquitto los */
     mosquitto_lib_init();
